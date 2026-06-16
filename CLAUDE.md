@@ -4,12 +4,14 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-McFillin Marketplace is a collection of Claude Code / Claude Desktop plugins that connect Claude to Xero. It contains two independent plugins, each bundling a local MCP server, skills, and a launcher script:
+McFillin Marketplace is two local MCP (Model Context Protocol) servers that connect Claude Desktop to Xero. Each is self-contained, with a launcher script that loads credentials and starts the compiled server over stdio:
 
 - **`xero-plugin/`** — Xero Accounting. The MCP server (`xero-plugin/xero-mcp-server/`) is a local fork of [XeroAPI/xero-mcp-server](https://github.com/XeroAPI/xero-mcp-server), ESM TypeScript, using the official `xero-node` SDK.
 - **`xpm-plugin/`** — Xero Practice Manager. A from-scratch MCP server (`xpm-plugin/src/`) using `axios` against the XPM API. Covers clients, tasks, and time entries.
 
-Both plugins share one Xero OAuth2 app and read `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` from the OS credential store.
+Both servers share one Xero OAuth2 app and read `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` from the OS credential store.
+
+Servers are registered with Claude Desktop via `claude_desktop_config.json` (`mcpServers`), pointing at the launcher scripts with absolute paths — see the root README. There are no Claude Code plugin manifests (`.claude-plugin/plugin.json`), `.mcp.json` files, or skills in this repo.
 
 ## Build & run
 
@@ -30,7 +32,7 @@ npm run build      # tsc
 npm run dev        # ts-node src/index.ts
 ```
 
-The MCP servers are not run directly — they are launched by `scripts/{xero,xpm}-start.js`, which load credentials then `spawn` the compiled `dist/index.js` over stdio. The root `.mcp.json` registers both servers for Claude Code; the per-plugin `.mcp.json` files register each plugin standalone (using `${CLAUDE_PLUGIN_ROOT}`).
+The MCP servers are not run directly — they are launched by `scripts/{xero,xpm}-start.js`, which load credentials then `spawn` the compiled `dist/index.js` over stdio. These are the commands Claude Desktop invokes via `claude_desktop_config.json`.
 
 **After changing server source, run `npm run build`** — the launcher executes the compiled `dist/`, not the TypeScript source.
 
@@ -67,6 +69,6 @@ Keep audit wrapping intact when adding or editing handlers — it is applied cen
 
 - **UK / Australian English** in docs and user-facing strings.
 - **Currency**: AUD by default, unless the Xero organisation uses a different base currency.
-- **Write safety**: skills require Claude to summarise and confirm before any create/update/delete. Preserve this behaviour when editing `skills/*/SKILL.md`.
+- **Write safety**: the servers expose create/update/delete tools. Their descriptions should make the effect clear so the calling client can confirm destructive actions with the user before invoking them.
 - Keep the two `audit/` implementations in sync if you change one.
 - Do not commit credentials or tokens. `node_modules/` and `dist/` are gitignored.
