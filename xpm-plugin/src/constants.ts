@@ -8,18 +8,17 @@ export const XERO_TOKEN_URL   = 'https://identity.xero.com/connect/token';
 export const XERO_AUTH_URL    = 'https://login.xero.com/identity/connect/authorize';
 export const XERO_CONNECT_URL = 'https://api.xero.com/connections';
 
-// Required OAuth2 scopes for XPM (granular scopes, replacing broad 'practicemanager')
+// Required OAuth2 scopes for XPM (granular scopes, replacing broad 'practicemanager').
+// READ-ONLY: this integration only reads from XPM, so no write scopes are requested.
 // See: https://developer.xero.com/documentation/guides/oauth2/scopes/
 export const XPM_SCOPES = [
   'offline_access',
   'openid',
   'profile',
   'email',
-  // Clients
-  'practicemanager.client',
+  // Clients (read-only)
   'practicemanager.client.read',
-  // Time entries
-  'practicemanager.time',
+  // Time entries (read-only)
   'practicemanager.time.read',
   // Jobs (tasks)
   'practicemanager.job.read',

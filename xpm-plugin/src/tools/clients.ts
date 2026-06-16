@@ -2,17 +2,15 @@
  * tools/clients.ts
  * MCP tools for Xero Practice Manager Clients.
  *
- * XPM API endpoints used (WorkflowMax-style):
+ * Read-only. XPM API endpoints used (WorkflowMax-style):
  *   GET  client.api/list          — paginated list of all clients
  *   GET  client.api/search        — search clients by name/email
  *   GET  client.api/get/{uuid}    — single client detail
- *   POST client.api/add           — create a client
- *   PUT  client.api/update        — update a client
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z }         from 'zod';
-import { xpmGet, xpmPost, xpmPut, truncate } from '../services/xpm-client.js';
+import { xpmGet, truncate } from '../services/xpm-client.js';
 import { CHARACTER_LIMIT, DEFAULT_PAGE_SIZE } from '../constants.js';
 import type { XpmClient, XpmListResponse } from '../types.js';
 import { registerToolWithAudit } from '../audit/wrap-handler.js';
@@ -131,131 +129,6 @@ Returns a single client object:
       }
 
       return { content: [{ type: 'text', text: JSON.stringify(formatClient(client), null, 2) }] };
-    }
-  );
-
-  // ── Create client ───────────────────────────────────────────────────────────
-  registerToolWithAudit(server,
-    'xpm_create_client',
-    {
-      title: 'Create XPM Client',
-      description: `Create a new client record in Xero Practice Manager.
-
-CONFIRM with the user before calling this tool — it creates a live record in XPM.
-
-Args:
-  - name (string): Client name (required)
-  - email (string): Primary email address
-  - phone (string): Phone number
-  - address (string): Street address
-  - city (string): City/suburb
-  - region (string): State or region
-  - postCode (string): Postal/zip code
-  - country (string): Country
-  - businessNumber (string): ABN, NZBN, or equivalent
-  - website (string): Website URL
-  - notes (string): Internal notes
-
-Returns the UUID of the newly created client on success.`,
-      inputSchema: z.object({
-        name:           z.string().min(1).describe('Client name (required)'),
-        email:          z.string().email().optional().describe('Primary email address'),
-        phone:          z.string().optional().describe('Phone number'),
-        address:        z.string().optional().describe('Street address'),
-        city:           z.string().optional().describe('City or suburb'),
-        region:         z.string().optional().describe('State or region'),
-        postCode:       z.string().optional().describe('Postal or zip code'),
-        country:        z.string().optional().describe('Country'),
-        businessNumber: z.string().optional().describe('ABN, NZBN, or equivalent'),
-        website:        z.string().url().optional().describe('Website URL'),
-        notes:          z.string().optional().describe('Internal notes'),
-      }).strict(),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    },
-    async (params) => {
-      const payload = {
-        Name:           params.name,
-        Email:          params.email,
-        Phone:          params.phone,
-        Address:        params.address,
-        City:           params.city,
-        Region:         params.region,
-        PostCode:       params.postCode,
-        Country:        params.country,
-        BusinessNumber: params.businessNumber,
-        Website:        params.website,
-        Notes:          params.notes,
-      };
-
-      const data = await xpmPost<XpmListResponse<XpmClient>>('client.api/add', payload);
-      const created = Array.isArray(data.Clients) ? data.Clients[0] : data.Client;
-
-      return {
-        content: [{
-          type: 'text',
-          text: created
-            ? `Client created successfully. UUID: ${created.UUID}\n${JSON.stringify(formatClient(created), null, 2)}`
-            : 'Client created but UUID not returned. Check XPM to confirm.',
-        }],
-      };
-    }
-  );
-
-  // ── Update client ───────────────────────────────────────────────────────────
-  registerToolWithAudit(server,
-    'xpm_update_client',
-    {
-      title: 'Update XPM Client',
-      description: `Update an existing client record in Xero Practice Manager.
-
-CONFIRM with the user before calling — this modifies a live record.
-Only provided fields are updated; omitted fields are left unchanged.
-
-Args:
-  - uuid (string): Client UUID to update (required)
-  - name, email, phone, address, city, region, postCode, country,
-    businessNumber, website, notes: Fields to update (all optional)
-
-Returns confirmation with the updated client record.`,
-      inputSchema: z.object({
-        uuid:           z.string().uuid().describe('Client UUID to update'),
-        name:           z.string().min(1).optional().describe('Updated client name'),
-        email:          z.string().email().optional().describe('Updated email'),
-        phone:          z.string().optional().describe('Updated phone'),
-        address:        z.string().optional().describe('Updated address'),
-        city:           z.string().optional().describe('Updated city'),
-        region:         z.string().optional().describe('Updated region'),
-        postCode:       z.string().optional().describe('Updated postcode'),
-        country:        z.string().optional().describe('Updated country'),
-        businessNumber: z.string().optional().describe('Updated ABN/NZBN'),
-        website:        z.string().url().optional().describe('Updated website URL'),
-        notes:          z.string().optional().describe('Updated internal notes'),
-      }).strict(),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    },
-    async ({ uuid, ...fields }) => {
-      const payload: Record<string, string | undefined> = {
-        UUID:           uuid,
-        Name:           fields.name,
-        Email:          fields.email,
-        Phone:          fields.phone,
-        Address:        fields.address,
-        City:           fields.city,
-        Region:         fields.region,
-        PostCode:       fields.postCode,
-        Country:        fields.country,
-        BusinessNumber: fields.businessNumber,
-        Website:        fields.website,
-        Notes:          fields.notes,
-      };
-
-      // Strip undefined values
-      const clean = Object.fromEntries(
-        Object.entries(payload).filter(([, v]) => v !== undefined)
-      );
-
-      await xpmPut<XpmListResponse<XpmClient>>('client.api/update', clean);
-      return { content: [{ type: 'text', text: `Client ${uuid} updated successfully.` }] };
     }
   );
 }

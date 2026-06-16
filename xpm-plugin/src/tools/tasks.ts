@@ -33,8 +33,7 @@ recording time entries. This list is typically small (< 100 items).
 Returns JSON array of task objects:
   [{ UUID, Name, Description, BillableRate, IsChargeable }]
 
-Use UUID values in xpm_list_time_entries or xpm_add_time_entry to
-filter or assign tasks to time records.`,
+Use UUID values to filter time records in xpm_list_time_entries.`,
       inputSchema: z.object({}).strict(),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },

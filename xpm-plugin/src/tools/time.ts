@@ -2,12 +2,9 @@
  * tools/time.ts
  * MCP tools for Xero Practice Manager Time Entries.
  *
- * XPM API endpoints used (WorkflowMax-style):
+ * Read-only. XPM API endpoints used (WorkflowMax-style):
  *   GET  time.api/list          — list time entries with filters
  *   GET  time.api/get/{uuid}    — single time entry
- *   POST time.api/add           — create time entry
- *   PUT  time.api/update        — update time entry
- *   POST time.api/delete        — delete time entry
  *
  * Time entries are always attached to a Job in XPM.
  * Minutes are the canonical unit for duration in the XPM API.
@@ -15,7 +12,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z }         from 'zod';
-import { xpmGet, xpmPost, xpmPut, truncate } from '../services/xpm-client.js';
+import { xpmGet, truncate } from '../services/xpm-client.js';
 import { CHARACTER_LIMIT, DEFAULT_PAGE_SIZE } from '../constants.js';
 import type { XpmTimeEntry, XpmListResponse } from '../types.js';
 import { registerToolWithAudit } from '../audit/wrap-handler.js';
@@ -112,128 +109,6 @@ Returns a single time entry object:
       }
 
       return { content: [{ type: 'text', text: JSON.stringify(formatTimeEntry(entry), null, 2) }] };
-    }
-  );
-
-  // ── Add time entry ──────────────────────────────────────────────────────────
-  registerToolWithAudit(server,
-    'xpm_add_time_entry',
-    {
-      title: 'Add XPM Time Entry',
-      description: `Create a new time entry in Xero Practice Manager.
-
-CONFIRM with the user before calling — this creates a live time record in XPM.
-Time entries must be linked to a Job UUID and a Task UUID.
-
-Args:
-  - jobUuid (string): UUID of the job this time is recorded against (required)
-  - taskUuid (string): UUID of the task type (required) — use xpm_list_tasks
-  - staffUuid (string): UUID of the staff member recording time (required)
-  - date (string): Date of the time entry — ISO format YYYY-MM-DD (required)
-  - minutes (number): Duration in minutes e.g. 90 = 1.5 hours (required, min 1)
-  - description (string): Notes or description of work performed
-  - isBillable (boolean): Whether the time is billable (default: true)
-
-Returns the UUID of the created time entry on success.`,
-      inputSchema: z.object({
-        jobUuid:     z.string().uuid().describe('Job UUID to record time against'),
-        taskUuid:    z.string().uuid().describe('Task UUID — use xpm_list_tasks'),
-        staffUuid:   z.string().uuid().describe('Staff UUID recording this time'),
-        date:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('Date YYYY-MM-DD'),
-        minutes:     z.number().int().min(1).describe('Duration in minutes (60 = 1 hour)'),
-        description: z.string().optional().describe('Work description or notes'),
-        isBillable:  z.boolean().default(true).describe('Whether the time is billable'),
-      }).strict(),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    },
-    async ({ jobUuid, taskUuid, staffUuid, date, minutes, description, isBillable }) => {
-      const payload = {
-        Job:         { UUID: jobUuid },
-        Task:        { UUID: taskUuid },
-        Staff:       { UUID: staffUuid },
-        DateUtc:     date,
-        Minutes:     minutes,
-        Description: description,
-        IsBillable:  isBillable,
-      };
-
-      const data  = await xpmPost<XpmListResponse<XpmTimeEntry>>('time.api/add', payload);
-      const entry = Array.isArray(data.Times) ? data.Times[0] : data.Time;
-
-      return {
-        content: [{
-          type: 'text',
-          text: entry
-            ? `Time entry created successfully. UUID: ${entry.UUID ?? 'N/A'}\n${JSON.stringify(formatTimeEntry(entry), null, 2)}`
-            : 'Time entry created but UUID not returned. Check XPM to confirm.',
-        }],
-      };
-    }
-  );
-
-  // ── Update time entry ───────────────────────────────────────────────────────
-  registerToolWithAudit(server,
-    'xpm_update_time_entry',
-    {
-      title: 'Update XPM Time Entry',
-      description: `Update an existing time entry in Xero Practice Manager.
-
-CONFIRM with the user before calling — this modifies a live record.
-Cannot update entries that have already been invoiced (IsInvoiced = true).
-Only provided fields are updated; omitted fields are left unchanged.
-
-Args:
-  - uuid (string): Time entry UUID to update (required)
-  - minutes (number): Updated duration in minutes
-  - description (string): Updated work description
-  - date (string): Updated date YYYY-MM-DD
-  - isBillable (boolean): Updated billable flag
-
-Returns confirmation on success.`,
-      inputSchema: z.object({
-        uuid:        z.string().uuid().describe('Time entry UUID to update'),
-        minutes:     z.number().int().min(1).optional().describe('Updated duration in minutes'),
-        description: z.string().optional().describe('Updated description'),
-        date:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Updated date YYYY-MM-DD'),
-        isBillable:  z.boolean().optional().describe('Updated billable flag'),
-      }).strict(),
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    },
-    async ({ uuid, minutes, description, date, isBillable }) => {
-      const payload: Record<string, unknown> = { UUID: uuid };
-      if (minutes     !== undefined) payload['Minutes']     = minutes;
-      if (description !== undefined) payload['Description'] = description;
-      if (date        !== undefined) payload['DateUtc']     = date;
-      if (isBillable  !== undefined) payload['IsBillable']  = isBillable;
-
-      await xpmPut<XpmListResponse<XpmTimeEntry>>('time.api/update', payload);
-      return { content: [{ type: 'text', text: `Time entry ${uuid} updated successfully.` }] };
-    }
-  );
-
-  // ── Delete time entry ───────────────────────────────────────────────────────
-  registerToolWithAudit(server,
-    'xpm_delete_time_entry',
-    {
-      title: 'Delete XPM Time Entry',
-      description: `Delete a time entry from Xero Practice Manager.
-
-⚠️  DESTRUCTIVE — this permanently removes the time record.
-ALWAYS confirm with the user before calling this tool.
-Cannot delete entries that have already been invoiced.
-
-Args:
-  - uuid (string): Time entry UUID to delete
-
-Returns confirmation on success.`,
-      inputSchema: z.object({
-        uuid: z.string().uuid().describe('Time entry UUID to delete'),
-      }).strict(),
-      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-    },
-    async ({ uuid }) => {
-      await xpmPost<unknown>('time.api/delete', { UUID: uuid });
-      return { content: [{ type: 'text', text: `Time entry ${uuid} deleted successfully.` }] };
     }
   );
 }

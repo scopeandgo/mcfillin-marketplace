@@ -47,10 +47,10 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('[xpm-mcp] Server started. Available tools:');
-  console.error('  Clients    : xpm_list_clients, xpm_search_clients, xpm_get_client, xpm_create_client, xpm_update_client');
+  console.error('[xpm-mcp] Server started (read-only). Available tools:');
+  console.error('  Clients    : xpm_list_clients, xpm_search_clients, xpm_get_client');
   console.error('  Tasks      : xpm_list_tasks, xpm_get_task');
-  console.error('  Time       : xpm_list_time_entries, xpm_get_time_entry, xpm_add_time_entry, xpm_update_time_entry, xpm_delete_time_entry');
+  console.error('  Time       : xpm_list_time_entries, xpm_get_time_entry');
 }
 
 function validateEnv(): void {

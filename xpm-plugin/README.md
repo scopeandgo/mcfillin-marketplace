@@ -1,6 +1,6 @@
 # XPM Plugin for Claude Code
 
-Connects Claude Code to **Xero Practice Manager (XPM)** — clients, tasks (jobs), and time entries, via a local MCP server built on the XPM v3.1 API.
+Connects Claude Code to **Xero Practice Manager (XPM)** — **read-only** access to clients, tasks (jobs), and time entries, via a local MCP server built on the XPM v3.1 API. The integration cannot create, update, or delete XPM records.
 
 XPM shares the same Xero OAuth2 app as the [Xero Accounting plugin](../xero-plugin/), so credentials are loaded securely from the same OS credential store entries at runtime. On first use, the plugin prompts the user to authorise via OAuth in their browser. Tokens are persisted to disk and refreshed automatically.
 
@@ -28,12 +28,12 @@ http://localhost:5000/callback
 
 ### Granular scopes
 
-The plugin requests these [granular scopes](https://developer.xero.com/documentation/guides/oauth2/scopes/) (replacing the deprecated broad `practicemanager` scope):
+The plugin requests these **read-only** [granular scopes](https://developer.xero.com/documentation/guides/oauth2/scopes/) (replacing the deprecated broad `practicemanager` scope). No write scopes are requested:
 
 | Scope | Purpose |
 |---|---|
-| `practicemanager.client`, `practicemanager.client.read` | Clients |
-| `practicemanager.time`, `practicemanager.time.read` | Time entries |
+| `practicemanager.client.read` | Clients |
+| `practicemanager.time.read` | Time entries |
 | `practicemanager.job.read` | Jobs / tasks |
 | `practicemanager.staff.read` | Staff |
 
@@ -79,6 +79,6 @@ Use the `/xpm` tool or describe what you need in natural language:
 
 - *"List my time entries for last week"*
 - *"Find the client record for Acme Corp"*
-- *"Log 90 minutes against job JOB-001 for client review"*
+- *"How much time was logged against job JOB-001 this month?"*
 
-Claude will always confirm before creating, updating, or deleting any records. Time entries are measured in minutes (60 minutes = 1 hour).
+This integration is read-only — it reports on XPM data but cannot change it. Time entries are measured in minutes (60 minutes = 1 hour).

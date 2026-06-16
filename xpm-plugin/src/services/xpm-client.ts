@@ -153,12 +153,6 @@ export const xpmGet = <T>(
   params?: Record<string, string | number | boolean | undefined>
 ): Promise<T> => xpmRequest<T>('GET', path, params);
 
-export const xpmPost = <T>(path: string, body: unknown): Promise<T> =>
-  xpmRequest<T>('POST', path, undefined, body);
-
-export const xpmPut = <T>(path: string, body: unknown): Promise<T> =>
-  xpmRequest<T>('PUT', path, undefined, body);
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function delay(ms: number): Promise<void> {
