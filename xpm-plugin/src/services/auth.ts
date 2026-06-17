@@ -287,7 +287,7 @@ function waitForAuthCode(port: number, expectedState: string): Promise<string> {
         }
 
         res.writeHead(200);
-        res.end('<html><body><h2>✅ Connected to Xero Practice Manager</h2><p>You may close this tab and return to Claude Code.</p></body></html>');
+        res.end('<html><body><h2>Connected to Xero Practice Manager</h2><p>You may close this tab and return to Claude Code.</p></body></html>');
         server.close();
         resolve(code);
         return;
