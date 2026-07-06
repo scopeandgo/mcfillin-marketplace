@@ -62,8 +62,8 @@ Note: Minutes = duration (60 minutes = 1 hour).`,
         staffuuid:  staffUuid,
         jobnumber:  jobNumber,
         clientuuid: clientUuid,
-        datefrom:   dateFrom,
-        dateto:     dateTo,
+        datefrom:   toXpmDate(dateFrom),
+        dateto:     toXpmDate(dateTo),
         invoiced:   invoiced,
         page,
         pagesize:   pageSize,
@@ -118,6 +118,15 @@ Returns a single time entry object:
 function normaliseArray<T>(val: T | T[] | undefined): T[] {
   if (!val) return [];
   return Array.isArray(val) ? val : [val];
+}
+
+/**
+ * Convert an ISO date (YYYY-MM-DD) to the compact yyyyMMdd format the XPM
+ * time.api/list endpoint expects for its datefrom/dateto filters.
+ * Returns undefined unchanged so optional filters stay optional.
+ */
+function toXpmDate(date: string | undefined): string | undefined {
+  return date ? date.replace(/-/g, '') : undefined;
 }
 
 function formatTimeEntry(t: XpmTimeEntry): Partial<XpmTimeEntry> {
